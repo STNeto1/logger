@@ -2,10 +2,12 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net"
 	"strings"
+	"time"
 
 	"github.com/stneto1/logger/pkg"
 )
@@ -18,6 +20,10 @@ func main() {
 		log.Fatal(err)
 	}
 
+	msgChan := make(chan pkg.Message, 100)
+
+	go handleMessageChannel(msgChan)
+
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
@@ -25,11 +31,11 @@ func main() {
 			continue
 		}
 
-		go handleConnection(conn)
+		go handleConnection(conn, msgChan)
 	}
 }
 
-func handleConnection(conn net.Conn) {
+func handleConnection(conn net.Conn, msgChan chan pkg.Message) {
 	defer conn.Close()
 
 	// max message size 10kb
@@ -43,7 +49,7 @@ func handleConnection(conn net.Conn) {
 				continue
 			}
 
-			log.Println("Error reading from connection", err)
+			fmt.Println("Error reading from connection", err)
 			continue
 		}
 
@@ -55,37 +61,35 @@ func handleConnection(conn net.Conn) {
 
 			var payload pkg.Message
 			if err := json.Unmarshal([]byte(correctToken), &payload); err != nil {
-				log.Println("Error unmarshalling payload", err)
+				fmt.Println("Error unmarshalling payload", err, correctToken)
 
 				continue
 			}
 
-			log.Printf("Message received: %s", correctToken)
+			msgChan <- payload
 		}
 
 	}
+}
 
-	// for {
-	// 	buf := make([]byte, 1024)
-	// 	n, err := conn.Read(buf)
-	//
-	// 	if err != nil {
-	// 		if err == io.EOF {
-	// 			continue
-	// 		}
-	//
-	// 		log.Println("Error reading from connection", err)
-	// 		continue
-	// 	}
-	//
-	// 	var payload pkg.Message
-	// 	if err := json.Unmarshal(buf[:n], &payload); err != nil {
-	// 		log.Println("Error unmarshalling payload", err)
-	// 		continue
-	// 	}
-	//
-	// 	log.Printf("Message received: %s", buf[:n])
-	// }
+func handleMessageChannel(ch chan pkg.Message) {
+	// queue := make([]pkg.Message, 0, 100)
+	var queue []pkg.Message
+
+	for {
+		select {
+		case msg := <-ch:
+			if len(queue) == 100 {
+				fmt.Println("batch size reached, sending to database [NOT YET]")
+				queue = nil
+			}
+
+			queue = append(queue, msg)
+
+		case <-time.After(1 * time.Second):
+			fmt.Printf("pool size: %d\n", len(queue))
+		}
+	}
 }
 
 func sanitizeToken(token string) string {
