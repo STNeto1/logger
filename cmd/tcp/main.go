@@ -20,7 +20,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	msgChan := make(chan pkg.Message, 100)
+	msgChan := make(chan pkg.Message, 100_000)
 
 	go handleMessageChannel(msgChan)
 
