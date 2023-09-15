@@ -45,11 +45,13 @@ func sendTcpMessage(qty int) {
 			// struct to bytes
 			msgBytes, err := json.Marshal(msg)
 			if err != nil {
-				log.Panicln("error on serialization:", err)
+				log.Println("error on serialization:", err)
+				return
 			}
 
 			if _, err := conn.Write(msgBytes); err != nil {
-				log.Panicln("error writing to connection:", err)
+				log.Println("error writing to connection:", err)
+				return
 			}
 
 			log.Printf("message %d sent\n", idx)
