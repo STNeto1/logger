@@ -12,6 +12,8 @@ import (
 )
 
 func main() {
+	pkg.InitDB()
+
 	log.Println("Http Server")
 
 	msgChan := make(chan pkg.Message, 100_000)
@@ -48,7 +50,13 @@ func handleMessageChannel(ch chan pkg.Message) {
 		select {
 		case msg := <-ch:
 			if len(queue) == 100 {
-				fmt.Println("batch size reached, sending to database [NOT YET]")
+				fmt.Println("batch size reached, sending to database")
+				if err := pkg.DBCon.CreateMessages(queue); err != nil {
+					fmt.Println("error on batch insert:", err)
+				} else {
+					fmt.Println("batch insert success")
+				}
+
 				queue = nil
 			}
 

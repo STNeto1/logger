@@ -2,7 +2,11 @@ module github.com/stneto1/logger
 
 go 1.21.0
 
-require github.com/gofiber/fiber/v2 v2.49.2
+require (
+	github.com/gofiber/fiber/v2 v2.49.2
+	github.com/jmoiron/sqlx v1.3.5
+	github.com/mattn/go-sqlite3 v1.14.17
+)
 
 require (
 	github.com/andybalholm/brotli v1.0.5 // indirect

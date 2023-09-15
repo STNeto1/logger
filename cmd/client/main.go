@@ -41,6 +41,8 @@ func sendTcpMessage(qty int) {
 				log.Println("error dialing connection:", err)
 			}
 
+			time.Sleep(time.Millisecond * (50 + time.Duration(idx)))
+
 			msg := pkg.Message{
 				Topic: "test",
 				Body:  json.RawMessage(`"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce dapibus nunc nec ullamcorper iaculis. Fusce elit libero, cursus eget luctus at, maximus sed nunc. Nunc et tincidunt mi, non semper lacus. Donec pretium placerat risus. Nulla ornare velit nec orci imperdiet aliquet ut eget ligula. Aliquam elementum ipsum id magna tempor, elementum commodo odio rutrum. Aliquam erat volutpat. Ut posuere interdum turpis, nec blandit sapien semper at. Vivamus scelerisque, dolor eget auctor ultricies, eros augue dignissim orci, at iaculis nunc mi sed purus. Suspendisse potenti."`),
@@ -59,7 +61,6 @@ func sendTcpMessage(qty int) {
 			}
 
 			log.Printf("message %d sent\n", idx)
-			time.Sleep(time.Millisecond)
 
 			if err := conn.Close(); err != nil {
 				log.Println("error closing connection:", err)
@@ -89,6 +90,8 @@ func sendHttpMessage(qty int) {
 	for i := 0; i < qty; i++ {
 		go func(group *sync.WaitGroup, idx int) {
 			defer group.Done()
+
+			time.Sleep(time.Millisecond * (50 + time.Duration(idx)))
 
 			res, err := http.NewRequest(http.MethodPost, "http://127.0.0.1:3000/log", bytes.NewReader(msgBytes))
 			if err != nil {
