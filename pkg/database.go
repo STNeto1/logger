@@ -3,6 +3,7 @@ package pkg
 import (
 	"log"
 
+	"github.com/huandu/go-sqlbuilder"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -14,28 +15,50 @@ type Container struct {
 var DBCon *Container
 
 func (c *Container) CreateMessage(msg Message) error {
-	_, err := c.DB.Exec("INSERT INTO messages (topic, data) VALUES (?, ?)", msg.Topic, msg.Body)
+	sql, args := sqlbuilder.NewInsertBuilder().InsertInto("messages").Cols("topic", "data").Values(msg.Topic, msg.Body).Build()
+
+	_, err := c.DB.Exec(sql, args...)
 	return err
 }
 
 func (c *Container) CreateMessages(msgs []Message) error {
-	tx, err := c.DB.Begin()
-	if err != nil {
-		return err
-	}
-
-	stmt, err := tx.Prepare("INSERT INTO messages (topic, data) VALUES (?, ?)")
-	if err != nil {
-		return err
-	}
+	builder := sqlbuilder.NewInsertBuilder().InsertInto("messages").Cols("topic", "data")
 
 	for _, msg := range msgs {
-		if _, err := stmt.Exec(msg.Topic, msg.Body); err != nil {
-			return err
-		}
+		builder.Values(msg.Topic, msg.Body)
 	}
 
-	return tx.Commit()
+	sql, args := builder.Build()
+
+	_, err := c.DB.Exec(sql, args...)
+	return err
+}
+
+func (c *Container) GetMessages() ([]Message, error) {
+	var msgs []Message
+
+	sql, args := sqlbuilder.NewSelectBuilder().Select("*").From("messages").Build()
+
+	if err := c.DB.Select(&msgs, sql, args...); err != nil {
+		return nil, err
+	}
+
+	return msgs, nil
+}
+
+func (c *Container) GetMessagesByTopic(topic string) ([]Message, error) {
+	var msgs []Message
+
+	sb := sqlbuilder.NewSelectBuilder().Select("*").From("messages")
+	sql, args := sb.Where(sb.Equal("topic", topic)).Build()
+
+	log.Println(sql, args)
+
+	if err := c.DB.Select(&msgs, sql, args...); err != nil {
+		return nil, err
+	}
+
+	return msgs, nil
 }
 
 func InitDB() {
@@ -58,12 +81,10 @@ func InitDB() {
 
 // Fake migration
 func getSchema() string {
-	return `
-        CREATE TABLE IF NOT EXISTS messages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            topic TEXT NOT NULL,
-            data JSON NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        );
-    `
+	return sqlbuilder.NewCreateTableBuilder().
+		CreateTable("messages").IfNotExists().
+		Define("id", "INTEGER PRIMARY KEY AUTOINCREMENT").
+		Define("topic", "TEXT NOT NULL").Define("data", "JSON NULL").
+		Define("created_at", "DATETIME DEFAULT CURRENT_TIMESTAMP").
+		String()
 }

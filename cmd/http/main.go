@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/bytedance/sonic"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/stneto1/logger/pkg"
@@ -20,7 +21,10 @@ func main() {
 
 	go handleMessageChannel(msgChan)
 
-	app := fiber.New()
+	app := fiber.New(fiber.Config{
+		JSONEncoder: sonic.Marshal,
+		JSONDecoder: sonic.Unmarshal,
+	})
 	app.Use(logger.New())
 
 	app.Post("/log", func(c *fiber.Ctx) error {
@@ -37,6 +41,32 @@ func main() {
 		return c.Status(http.StatusCreated).JSON(fiber.Map{
 			"message": "success",
 		})
+	})
+
+	app.Get("/log", func(c *fiber.Ctx) error {
+		msgs, err := pkg.DBCon.GetMessages()
+
+		if err != nil {
+			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+				"error": err.Error(),
+			})
+		}
+
+		return c.Status(http.StatusOK).JSON(msgs)
+	})
+
+	app.Get("/log/:topic", func(c *fiber.Ctx) error {
+		topic := c.Params("topic")
+
+		msgs, err := pkg.DBCon.GetMessagesByTopic(topic)
+
+		if err != nil {
+			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+				"error": err.Error(),
+			})
+		}
+
+		return c.Status(http.StatusOK).JSON(msgs)
 	})
 
 	app.Listen(":3000")

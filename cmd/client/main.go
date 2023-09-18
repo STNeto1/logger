@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-faker/faker/v4"
 	"github.com/stneto1/logger/pkg"
 )
 
@@ -28,6 +29,30 @@ func main() {
 	}
 }
 
+func createMessage() pkg.Message {
+	var topic string
+	err := faker.FakeData(&topic)
+	if err != nil {
+		log.Fatalln("error creating fake data:", err)
+	}
+
+	var data map[string]string
+	err = faker.FakeData(&data)
+	if err != nil {
+		log.Fatalln("error creating fake data:", err)
+	}
+
+	msg, err := json.Marshal(data)
+	if err != nil {
+		log.Fatalln("error marshaling data:", err)
+	}
+
+	return pkg.Message{
+		Topic: topic,
+		Body:  json.RawMessage(msg),
+	}
+}
+
 func sendTcpMessage(qty int) {
 	var wg sync.WaitGroup
 	wg.Add(qty)
@@ -43,11 +68,7 @@ func sendTcpMessage(qty int) {
 
 			time.Sleep(time.Millisecond * (50 + time.Duration(idx)))
 
-			msg := pkg.Message{
-				Topic: "test",
-				Body:  json.RawMessage(`"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce dapibus nunc nec ullamcorper iaculis. Fusce elit libero, cursus eget luctus at, maximus sed nunc. Nunc et tincidunt mi, non semper lacus. Donec pretium placerat risus. Nulla ornare velit nec orci imperdiet aliquet ut eget ligula. Aliquam elementum ipsum id magna tempor, elementum commodo odio rutrum. Aliquam erat volutpat. Ut posuere interdum turpis, nec blandit sapien semper at. Vivamus scelerisque, dolor eget auctor ultricies, eros augue dignissim orci, at iaculis nunc mi sed purus. Suspendisse potenti."`),
-			}
-
+			msg := createMessage()
 			// struct to bytes
 			msgBytes, err := json.Marshal(msg)
 			if err != nil {
@@ -75,21 +96,17 @@ func sendHttpMessage(qty int) {
 	var wg sync.WaitGroup
 	wg.Add(qty)
 
-	msg := pkg.Message{
-		Topic: "test",
-		Body:  json.RawMessage(`"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce dapibus nunc nec ullamcorper iaculis. Fusce elit libero, cursus eget luctus at, maximus sed nunc. Nunc et tincidunt mi, non semper lacus. Donec pretium placerat risus. Nulla ornare velit nec orci imperdiet aliquet ut eget ligula. Aliquam elementum ipsum id magna tempor, elementum commodo odio rutrum. Aliquam erat volutpat. Ut posuere interdum turpis, nec blandit sapien semper at. Vivamus scelerisque, dolor eget auctor ultricies, eros augue dignissim orci, at iaculis nunc mi sed purus. Suspendisse potenti."`),
-	}
-
-	// struct to bytes
-	msgBytes, err := json.Marshal(msg)
-	if err != nil {
-		log.Panicln("error on serialization:", err)
-		return
-	}
-
 	for i := 0; i < qty; i++ {
 		go func(group *sync.WaitGroup, idx int) {
 			defer group.Done()
+
+			msg := createMessage()
+			// struct to bytes
+			msgBytes, err := json.Marshal(msg)
+			if err != nil {
+				log.Panicln("error on serialization:", err)
+				return
+			}
 
 			time.Sleep(time.Millisecond * (50 + time.Duration(idx)))
 
