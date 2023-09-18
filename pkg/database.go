@@ -46,6 +46,18 @@ func (c *Container) GetMessages() ([]Message, error) {
 	return msgs, nil
 }
 
+func (c *Container) GetTopics() ([]TopicMetadata, error) {
+	var data []TopicMetadata
+
+	sql, args := sqlbuilder.NewSelectBuilder().Select("topic", "count(topic)").From("messages").GroupBy("topic").Build()
+
+	if err := c.DB.Select(&data, sql, args...); err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
 func (c *Container) GetMessagesByTopic(topic string) ([]Message, error) {
 	var msgs []Message
 

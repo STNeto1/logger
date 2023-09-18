@@ -43,6 +43,18 @@ func main() {
 		})
 	})
 
+	app.Get("/topics", func(c *fiber.Ctx) error {
+		data, err := pkg.DBCon.GetTopics()
+
+		if err != nil {
+			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+				"error": err.Error(),
+			})
+		}
+
+		return c.Status(http.StatusOK).JSON(data)
+	})
+
 	app.Get("/log", func(c *fiber.Ctx) error {
 		msgs, err := pkg.DBCon.GetMessages()
 
